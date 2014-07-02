@@ -1,4 +1,4 @@
-/*Beginning work on a digital thermostat.  This is to replace the round hockey
+/* This is the begining work on a digital thermostat.  This is to replace the round hockey
 puck style thermostat the currently resides in my house.  I'm
 going to train this device to react to night/day temperatures.  It will also
 indicate when the thermostat is sending a signal to begin heating the building.
@@ -16,6 +16,9 @@ My hope is that this will simplify consuming less natrual gas.
 #include "DHT.h"
 
 #define DHTPIN 2
+#define DHTTYPE DHT22
+
+DHT dht(DHTPIN, DHTTYPE);
 
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 
@@ -24,13 +27,14 @@ byte light_value;
 byte is_on;
 int  set_temp;
 
+int is_temp;
+
 void setup() 
   {
-	//open serial port
+        dht.begin();
 	Serial.begin(9600);
 	//boot screen
 	lcd.begin(16,2);
-	pinMode(moisture_LED, OUTPUT);
 	lcd.print("ArduinoStat");
 	delay(2000);
 	lcd.clear();
@@ -40,9 +44,19 @@ void setup()
   }
 void loop()
 {
-        //looking to move set temperature
+        //reading temperature at start of the loop
+        is_temp = dht.readTemperature(true);
         
-        while (lcd.readButtons();)
+        if(isnan(is_temp))
+        {
+          Serial.println("Sensor Failed.");
+          lcd.clear();
+          lcd.print("Sensor Failed.");
+        }
+        
+        //looking to move set temperature
+        //Button Controls for setting temperature        
+        while (lcd.readButtons())
         {
           lcd.clear();
           lcd.setCursor(0,0);
@@ -77,7 +91,7 @@ void loop()
               lcd.print(set_temp);
               Serial.println(set_temp);
             }             
-            
+        }
         //light sensor
 	//if statement to decide night time/day time
 	//resort to some sort of default temperature
@@ -95,14 +109,12 @@ void loop()
 	}
 	else
 	{
-		Serial.println("Probably Night Time")
-		lcd.print("Night Time")
+		Serial.println("Probably Night Time");
+		lcd.print("Night Time");
 		//Set Night Temperature
 		//Mark 'bed time' time
 	}
 
-	//Button Controls for setting temperature
 	
-	//Feedback from buttons, indicating temperature change
-	//Should I develope some sort of averaging ('learning') algorithim?
+	
 }
