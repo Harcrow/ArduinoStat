@@ -22,15 +22,18 @@ DHT dht(DHTPIN, DHTTYPE);
 
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 
-byte light_value;
+byte light_pin = 0;
+int light_value;
 //declaring a pin for an LED, indicating status
-byte is_on;
-int  set_temp;
+byte is_on = 9;
+int  set_temp = 68;
 
 int is_temp;
 
 void setup() 
   {
+          
+        pinMode(is_on, OUTPUT);
         dht.begin();
 	Serial.begin(9600);
 	//boot screen
@@ -41,11 +44,23 @@ void setup()
 	lcd.print("By: Ty");
 	delay(2000);
 	lcd.clear();
+
   }
 void loop()
 {
+        lcd.clear();
         //reading temperature at start of the loop
         is_temp = dht.readTemperature(true);
+        Serial.println("Temperature: ");
+        Serial.println(is_temp);
+        lcd.print("Temperature: ");
+        lcd.print(is_temp);
+        delay(1000);        
+        lcd.clear();
+        lcd.print("Set Temp: ");
+        lcd.print(set_temp);
+        delay(1000);
+        
         
         if(isnan(is_temp))
         {
@@ -68,6 +83,7 @@ void loop()
               set_temp = set_temp + 1;
               lcd.print(set_temp);
               Serial.println(set_temp);
+              delay(250);
             }
             if (lcd.readButtons() & BUTTON_DOWN)
             {
@@ -76,6 +92,7 @@ void loop()
               set_temp = set_temp - 1;
               lcd.print(set_temp);
               Serial.println(set_temp);
+              delay(250);
             }
             if (lcd.readButtons() & BUTTON_LEFT)
             {
@@ -83,6 +100,7 @@ void loop()
               set_temp = 58;
               lcd.print(set_temp);
               Serial.println(set_temp);
+              delay(250);
             }
             if (lcd.readButtons() & BUTTON_RIGHT)
             {
@@ -90,30 +108,28 @@ void loop()
               set_temp = 66;
               lcd.print(set_temp);
               Serial.println(set_temp);
+              delay(250);
             }             
         }
         //light sensor
 	//if statement to decide night time/day time
 	//resort to some sort of default temperature
-	light_value = analogRead(light_value);
-	Serial.print("light sensor reads ");
-	Serial.println(light_value);
-        //Check photoresistor values
-        //Look into using Date/Time as a while, to avoid so many ifs
-	if (light_value > 300)
-	{        
-                Serial.println("Probably Day Time");
-		lcd.print("Day Time");
-		//Set Day Temperature
-		//Mark 'day time' time
-	}
-	else
-	{
-		Serial.println("Probably Night Time");
-		lcd.print("Night Time");
-		//Set Night Temperature
-		//Mark 'bed time' time
-	}
+	light_value = analogRead(light_pin);
+	//Serial.println("light sensor reads ");
+        //Serial.println(light_value);
+        delay(500);
+        
+        if(set_temp > is_temp)
+        {
+          digitalWrite(is_on, HIGH);
+        }
+        
+        else
+        {
+           digitalWrite(is_on, LOW);
+        }
+  
+     
 
 	
 	
