@@ -126,19 +126,19 @@ void loop()
               delay(250);
             }
 			
-			if (lcd.readButtons() & BUTTON_SELECT)
-			{   
-				is_temp = dht.readTemperature(true);
-				lcd.clear();
-				lcd.print("Temperature: ");
-        		lcd.print(is_temp);
-				lcd.println("Set Temp: ");
-				lcd.print(set_temp);
-				Serial.println("Temperature: ");
-				Serial.print(is_temp);
-				Serial.println("Set Temp: ");
-				Serial.print(set_temp);
-			}             
+		if (lcd.readButtons() & BUTTON_SELECT)
+		{   
+			is_temp = dht.readTemperature(true);
+			lcd.clear();
+			lcd.print("Temperature: ");
+		lcd.print(is_temp);
+			lcd.println("Set Temp: ");
+			lcd.print(set_temp);
+			Serial.println("Temperature: ");
+			Serial.print(is_temp);
+			Serial.println("Set Temp: ");
+			Serial.print(set_temp);
+		}             
         }
         //light sensor
 	//if statement to decide night time/day time
