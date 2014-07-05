@@ -9,18 +9,24 @@ My hope is that this will simplify consuming less natrual gas.
 //code as possible, just to decrease over powerconsumption.
 //Ideally I'd like a couple 9V batteries to power this for the season.
 
+
 #include <Wire.h>
 #include <Adafruit_RGBLCDShield.h>
 #include <Adafruit_MCP23017.h>
 #include <DateTime.h>
 #include "DHT.h"
+#include <SPI.h>
+#include <Ethernet.h>
 
 #define DHTPIN 2
 #define DHTTYPE DHT22
 
+
 DHT dht(DHTPIN, DHTTYPE);
 
+
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+
 
 byte light_pin = 0;
 int light_value;
@@ -28,13 +34,28 @@ int light_value;
 byte is_on = 9;
 int  set_temp = 68;
 
+// Enter a MAC address and IP address for your controller below.
+// The IP address will be dependent on your local network:
+byte mac[] =
+ {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+ IPAddress ip(192,168,1,177);
+
+// Initialize the Ethernet server library
+// with the IP address and port you want to use 
+// (port 80 is default for HTTP):
+ EthernetServer server(80);
+
 int is_temp;
 
 void setup() 
   {
+	Ethernet.begin(mac, ip);
+	server.begin();
+	Serial.print("server is at ");
+	Serial.println(Ethernet.localIP());
           
-        pinMode(is_on, OUTPUT);
-        dht.begin();
+    pinMode(is_on, OUTPUT);
+    dht.begin();
 	Serial.begin(9600);
 	//boot screen
 	lcd.begin(16,2);
@@ -44,23 +65,12 @@ void setup()
 	lcd.print("By: Ty");
 	delay(2000);
 	lcd.clear();
-
   }
 void loop()
 {
-        lcd.clear();
+       // lcd.clear();
         //reading temperature at start of the loop
         is_temp = dht.readTemperature(true);
-        Serial.println("Temperature: ");
-        Serial.println(is_temp);
-        lcd.print("Temperature: ");
-        lcd.print(is_temp);
-        delay(1000);        
-        lcd.clear();
-        lcd.print("Set Temp: ");
-        lcd.print(set_temp);
-        delay(1000);
-        
         
         if(isnan(is_temp))
         {
@@ -78,6 +88,7 @@ void loop()
           
           if (lcd.readButtons() & BUTTON_UP)
             { 
+			  is_temp = dht.readTemperature(true);
               lcd.clear();
               delay(10);
               set_temp = set_temp + 1;
@@ -87,6 +98,7 @@ void loop()
             }
             if (lcd.readButtons() & BUTTON_DOWN)
             {
+			  is_temp = dht.readTemperature(true);
               lcd.clear();
               delay(10);
               set_temp = set_temp - 1;
@@ -96,6 +108,7 @@ void loop()
             }
             if (lcd.readButtons() & BUTTON_LEFT)
             {
+			  is_temp = dht.readTemperature(true);
               lcd.clear();
               set_temp = 58;
               lcd.print(set_temp);
@@ -103,13 +116,29 @@ void loop()
               delay(250);
             }
             if (lcd.readButtons() & BUTTON_RIGHT)
-            {
+            { 
+			
+			  is_temp = dht.readTemperature(true);
               lcd.clear();
               set_temp = 66;
               lcd.print(set_temp);
               Serial.println(set_temp);
               delay(250);
-            }             
+            }
+			
+			if (lcd.readButtons() & BUTTON_SELECT)
+			{   
+				is_temp = dht.readTemperature(true);
+				lcd.clear();
+				lcd.print("Temperature: ");
+        		lcd.print(is_temp);
+				lcd.println("Set Temp: ");
+				lcd.print(set_temp);
+				Serial.println("Temperature: ");
+				Serial.print(is_temp);
+				Serial.println("Set Temp: ");
+				Serial.print(set_temp);
+			}             
         }
         //light sensor
 	//if statement to decide night time/day time
@@ -117,7 +146,6 @@ void loop()
 	light_value = analogRead(light_pin);
 	//Serial.println("light sensor reads ");
         //Serial.println(light_value);
-        delay(500);
         
         if(set_temp > is_temp)
         {
@@ -130,7 +158,4 @@ void loop()
         }
   
      
-
-	
-	
 }
