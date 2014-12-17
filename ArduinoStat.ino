@@ -15,25 +15,32 @@ My hope is that this will simplify consuming less natrual gas.
 #include "DHT.h"
 #include <Time.h>
 #include <TimeAlarms.h>
+#include "Average.h"
 
 #define DHTPIN 2
 #define DHTTYPE DHT22
-#define control_pin 9
+#define control_pin 8
 
 DHT dht(DHTPIN, DHTTYPE);
 
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 
 byte set_temp = 68;
-byte is_temp;
+byte real_temp;
+float is_temp;
 byte refresh_check_1;
 byte refresh_check_2;
+//float temperatures[100];
+//float sum;
+//int j, i = 0;
+time_t turned_on, turned_off;
 
-//EthernetServer server(80);
+Average<float> ave(100);
+
 
 void setup() 
   {
-    //Activating Temp sensor, webserver, LCD display, etc...
+    //Activating Temp sensor, LCD display, etc...
         dht.begin();
 
 	Serial.begin(9600);
@@ -42,41 +49,66 @@ void setup()
 	delay(2000);
 	lcd.clear();
               
-        is_temp = dht.readTemperature(true);
+       
         lcd.clear();
-        lcd.print("Current Temp: " + String(is_temp));
-        lcd.setCursor(0,1);
-        lcd.print("Set Temp: " + String(set_temp));
+       
         pinMode(control_pin, OUTPUT);
+        digitalWrite(control_pin, LOW);
         
-        setTime(13, 38, 30, 10, 15, 14);
+        setTime(22, 00, 00, 12, 9, 14);
         
-        Alarm.alarmRepeat(5, 0, 0, MorningAlarm);
-        Alarm.alarmRepeat(7, 0, 0, LeavingHome);
-        Alarm.alarmRepeat(17, 30, 0, ArriveHome);
-        Alarm.alarmRepeat(21, 30, 0, EveningAlarm);
+        Alarm.alarmRepeat(4, 0, 0, MorningAlarm);
+        Alarm.alarmRepeat(7, 30, 0, LeavingHome);
+        Alarm.alarmRepeat(16, 30, 0, ArriveHome);
+        Alarm.alarmRepeat(22, 30, 0, EveningAlarm);
         
+     
         
   }
 void loop()
 {
-        digitalClockDisplay();
-        Alarm.delay(1000);
+        
+        Alarm.delay(2);
         
         //reading temperature at start of the loop
-        is_temp = dht.readTemperature(true);
         
-        if(set_temp <= is_temp)
+       /* temperatures[i] = dht.readTemperature(true);
+          Serial.print("Temps: ");
+          Serial.println(temperatures[i]);
+          Serial.print("Is: ");
+          Serial.println(is_temp, i);
+          is_temp += temperatures[i];
+          i++;
+          
+        if(i > 99)
           {
-            digitalWrite(control_pin, HIGH);
+            i = 0;
           }
-          else 
-          {
-            digitalWrite(control_pin, LOW);
-          }
-        
-        
+          
+        you're stupid ->>is_temp = is_temp / i;
+        */        
+        ave.push(dht.readTemperature(true));
+        is_temp = ave.mean();
+        Serial.print("Mean: ");
         Serial.println(is_temp);
+        
+        if(set_temp > is_temp && (now() - turned_off) > 900)
+          {  
+            turned_on = now();
+            //Relay is active low...only took  me 6 months to figure out
+            digitalWrite(control_pin, LOW);
+           
+          }
+         else if(set_temp < is_temp && (now() - turned_on) > 900 )
+          {
+            turned_off = now();
+            digitalWrite(control_pin, HIGH);
+           
+          }
+        
+        
+   
+        
         if(isnan(is_temp))
         {
           Serial.println("Sensor Failed.");
@@ -85,7 +117,7 @@ void loop()
         }
         
         //Button Controls for setting temperature
-//        EthernetClient client = server.available();
+
        
         while (lcd.readButtons())
         {
@@ -99,8 +131,9 @@ void loop()
               set_temp = set_temp + 1;
               //lcd.print(set_temp);
               Serial.println(set_temp);
+              
             }
-            if (lcd.readButtons() & BUTTON_DOWN)
+            else if (lcd.readButtons() & BUTTON_DOWN)
             {
               lcd.clear();
               delay(100);
@@ -108,38 +141,55 @@ void loop()
               //lcd.print(set_temp);
               Serial.println(set_temp);
             }
-            if (lcd.readButtons() & BUTTON_LEFT)
+            else if (lcd.readButtons() & BUTTON_LEFT)
             {
               lcd.clear();
               set_temp = 58;
               //lcd.print(set_temp);
               Serial.println(set_temp);
             }
-            if (lcd.readButtons() & BUTTON_RIGHT)
+            else if (lcd.readButtons() & BUTTON_RIGHT)
             {
               lcd.clear();
               set_temp = 66;
               //lcd.print(set_temp);
               Serial.println(set_temp);
-            }             
+            }
+            else;  
+            
+            if(set_temp > is_temp)
+                {
+                  turned_on = now();
+                  //Relay is active low...only took  me 6 months to figure out
+                  digitalWrite(control_pin, LOW);
+                  Serial.println("ON");
+                }
+             else if(set_temp < is_temp)
+                {
+                   turned_off = now();
+                   digitalWrite(control_pin, HIGH);
+                   Serial.println("OFF");
+                }
+              
         }
+        real_temp = dht.readTemperature(true);
         
-        
-        if (refresh_check_1 != set_temp || refresh_check_2 != is_temp)
+        //I think I can remove the refresh variables to save memory
+        if (refresh_check_1 != set_temp || refresh_check_2 != real_temp)
             {
-              is_temp = dht.readTemperature(true);
+              //real_temp = dht.readTemperature(true);
               lcd.clear();
-              lcd.print("Temp: " + String(is_temp));
+              lcd.print("Temp: " + String(real_temp));
               lcd.setCursor(0,1);
               lcd.print("Set Temp: " + String(set_temp));
               refresh_check_1 = set_temp;
-              refresh_check_2 = is_temp;
+              refresh_check_2 = real_temp;
            
             }  
  }
 void MorningAlarm()
 {
-  set_temp = 68;
+  set_temp = 72;
 }
 
 void LeavingHome()
@@ -149,16 +199,17 @@ void LeavingHome()
 
 void EveningAlarm()
 {
-  set_temp = 60;//This will set the heater to some low evening temperature.
+  set_temp = 66;//This will set the heater to some low evening temperature.
 }
 void ArriveHome()
 {
-  set_temp = 68;
+  set_temp = 72;
 }
 
-void digitalClockDisplay()
+/*void digitalClockDisplay()
 {
   // digital clock display of the time
+  Serial.println("test");
   Serial.print(hour());
   printDigits(minute());
   printDigits(second());
@@ -170,4 +221,4 @@ void printDigits(int digits)
   if(digits < 10)
     Serial.print('0');
   Serial.print(digits);
-}
+}*/
